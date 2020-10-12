@@ -67,6 +67,7 @@ void logging_warning(LOG * self,const char * message,...){
     fprintf(self->output,"%s %s\n","[WARNING]",buffer);
 }
 
+/* Record Error */
 void logging_error(LOG * self,const char * message,...){
     if (!self->output) return;
     if (self->level<MESSAGE_ERROR) return;
@@ -78,6 +79,7 @@ void logging_error(LOG * self,const char * message,...){
     fprintf(self->output,"%s %s\n","[ERROR]",buffer);
 }
 
+/* Record Infomation */
 void logging_info(LOG * self,const char * message,...){
     if (!self->output) return;
     if (self->level<MESSAGE_INFO) return;
@@ -89,6 +91,7 @@ void logging_info(LOG * self,const char * message,...){
     fprintf(self->output,"%s %s\n","[INFO]",buffer);
 }
 
+/* Record Debug Infomation */
 void logging_debug(LOG * self,const char *message,...){
     if (!self->output) return;
     if (!self->is_debug) return;

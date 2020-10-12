@@ -21,6 +21,7 @@ typedef struct client_group
 {
     char *name;                  // 分组标识名
     CLIENT clients[MAX_CLIENTS]; // 客户端数组
+    pthread_mutex_t clients_lock[MAX_CLIENTS]; // 客户端锁
     int count;                   // 客户端数量
     int lastcount;               // 历史客户端连接数量
     pthread_mutex_t lock;
@@ -55,6 +56,12 @@ HUB *session_hub_init(char *name, size_t size)
         hub->session->logger->error(hub->session->logger, "客户组互斥锁创建失败");
         exit(1);
     }
+    for (int i=0;i<MAX_CLIENTS;++i){
+        if (pthread_mutex_init(&(hub->group.clients_lock[i]),NULL)!=0){
+            hub->session->logger->error(hub->session->logger,"客户端锁创建失败");
+            exit(1);
+        }
+    }
     hub->buffer_size = size;
     hub->send = &session_hub_send;
     hub->listen = &session_hub_listen;
@@ -72,6 +79,7 @@ void session_hub_send(HUB *hub, GROUP *group, const void *buffer)
         if (!client->closed)
         {
             ++alive;
+            pthread_mutex_lock(&group->clients_lock[index]);
             if (send(client->sockfd, buffer, hub->buffer_size, 0) == -1)
             {
                 LOG *logger = hub->session->logger;
@@ -87,6 +95,7 @@ void session_hub_send(HUB *hub, GROUP *group, const void *buffer)
                 client->closed = true;
                 pthread_mutex_unlock(&(group->lock));
             }
+            pthread_mutex_unlock(&group->clients_lock[index]);
         }
     }
 }

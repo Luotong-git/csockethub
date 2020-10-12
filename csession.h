@@ -24,6 +24,7 @@ typedef struct client_session{
     struct hostent * host; // 远程主机
     LOG * logger; // 客户端日志
     size_t buffer_size;
+    pthread_mutex_t send_mutex;
     void (*send)(struct client_session * self,void * buffer); // 发送给远程服务器
     void (*rev_event)(struct client_session * self,void * buffer); // 接收到服务器的回调事件
 } CLIENT_SESSION;
@@ -46,9 +47,11 @@ void * client_session_listen(void * args){ //监听远程服务器发送的消�
 }
 
 void client_session_send(CLIENT_SESSION * self,void * buffer){
+    pthread_mutex_lock(&self->send_mutex);
     if (send(self->sockfd,buffer,self->buffer_size,0)==-1){
         self->logger->warning(self->logger,"客户端消息%s发送失败",buffer);
     }
+    pthread_mutex_unlock(&self->send_mutex);
 }
 
 CLIENT_SESSION * client_session_init(char * hostname,int port){
@@ -56,6 +59,7 @@ CLIENT_SESSION * client_session_init(char * hostname,int port){
     bzero(session,sizeof(CLIENT_SESSION));
     session->logger = logging_create(stdout);
     session->logger->info(session->logger,"初始化客户端");
+    pthread_mutex_init(&session->send_mutex,NULL);
     if ((session->host = gethostbyname(hostname))==NULL){
         session->logger->error(session->logger,"客户端主机名错误: %s",hostname);
         exit(1);

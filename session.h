@@ -2,7 +2,7 @@
 #define _SESSION_H
 
 #define DEFAULT_PORT 5538
-#define MAX_CONNECTIONS 25
+#define MAX_CONNECTIONS 2
 #include <stdlib.h>
 #include "logging.h"
 #include <sys/socket.h> 

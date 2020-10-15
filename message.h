@@ -4,18 +4,23 @@
 #include "gobang.h"
 
 /* Message Type */
-struct Message_Type{
+typedef struct message_type{
     int type; /* 0 null,1 Operation Type,2 Message */
-};
+} MessageType;
 
 /* Operation Type */
-struct GoBang_Operation{
+typedef struct gobang_operation{
     struct gb_coord coord;
-};
+} GongBangOperation;
 
 /* message */
-struct Message {
+typedef struct messagebuffer {
     char buffer[512];
-};
+} MessageBuffer;
+
+/* 用户类 */
+typedef struct user_model{
+    char Name[20]; // 用户名
+} UserModel;
 
 #endif

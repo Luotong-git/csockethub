@@ -7,7 +7,7 @@
 #include <pthread.h>
 #include <arpa/inet.h>
 
-#define MAX_CLIENTS 25
+#define MAX_CLIENTS 2
 
 typedef struct client
 {
@@ -32,12 +32,12 @@ typedef struct session_hub
     GROUP group;
     SESSION *session;
     size_t buffer_size;
-    void (*send)(struct session_hub *hub, GROUP *group, const void *buffer); // 向分组发送消息
+    void (*send)(struct session_hub *hub,int client_fd, GROUP *group, const void *buffer); // 向分组发送消息
     void (*listen)(struct session_hub *hub);                                 // 监听客户端，并将客户端加入分组
-    void (*rev_event)(struct session_hub *hub, const void *buffer);          // 服务器收到客户端发送的信息后的回调函数
+    void (*rev_event)(int client_fd,struct session_hub *hub, const void *buffer);          // 服务器收到客户端发送的信息后的回调函数
 } HUB;
 
-void session_hub_send(HUB *hub, GROUP *group, const void *buffer);
+void session_hub_send(HUB *hub,int client_fd, GROUP *group, const void *buffer);
 void session_hub_listen(HUB *hub);
 
 HUB *session_hub_init(char *name, size_t size)
@@ -68,7 +68,7 @@ HUB *session_hub_init(char *name, size_t size)
     return hub;
 }
 
-void session_hub_send(HUB *hub, GROUP *group, const void *buffer)
+void session_hub_send(HUB *hub, int client_fd,GROUP *group, const void *buffer)
 {
     int alive = 0; // 存活的客户端
     for (int index = 0; index < MAX_CLIENTS; ++index)
@@ -76,6 +76,7 @@ void session_hub_send(HUB *hub, GROUP *group, const void *buffer)
         CLIENT *client = &(group->clients[index]);
         if (alive > group->count)
             break;
+        if (client->sockfd==client_fd) continue; // 默认不发送给自己，如果设置为0就是发送给所有
         if (!client->closed)
         {
             ++alive;
@@ -112,7 +113,6 @@ void *session_hub_rev(void *args)
     struct hub_with_client *hubc = (struct hub_with_client *)(args);
     HUB *hub = hubc->hub;
     CLIENT *client = hubc->client;
-    // free(args); // 释放指针变量
     hub->session->logger->info(hub->session->logger, "服务端开始接收%s客户端的消息", client->identity);
     char buffer[hub->buffer_size];
     bzero(buffer, sizeof(buffer));
@@ -125,7 +125,7 @@ void *session_hub_rev(void *args)
                 hub->session->logger->info(hub->session->logger, "接收到%s发送的信息:%s", client->identity, buffer);
                 if (hub->rev_event)
                 {
-                    hub->rev_event(hub, buffer);
+                    hub->rev_event(client->sockfd,hub, buffer);
                 };
                 bzero(buffer,sizeof(buffer));
             }
